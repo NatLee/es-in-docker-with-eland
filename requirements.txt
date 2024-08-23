@@ -1,0 +1,10 @@
+numpy<2
+eland==8.15.0
+elasticsearch==8.15.0
+
+tqdm
+pandas
+matplotlib
+requests
+pytest
+
