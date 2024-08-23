@@ -1,0 +1,12 @@
+
+es-data/
+es-certs/
+
+*.crt
+
+*.gz
+
+__pycache__
+
+.DS_Store
+desktop.ini
