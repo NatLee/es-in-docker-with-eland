@@ -1,6 +1,6 @@
 # Example of Elasticsearch in Docker with Eland
 
-[EN|[TW](./README.zh-TW.md)]
+[[EN](./README.md)|[TW](./README.zh-TW.md)]
 
 This is an example of Elasticsearch in Docker with Eland.
 

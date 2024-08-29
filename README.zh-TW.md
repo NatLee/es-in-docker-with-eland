@@ -1,10 +1,12 @@
 # Elasticsearch 在 Docker 中與 Eland 一起使用的範例
 
-[[EN](./README.md)|TW]
+[[EN](./README.md)|[TW](./README.zh-TW.md)]
 
 這是一個在 Docker 中使用 Elasticsearch 並結合 Eland 的範例。
 
 ## 使用方法
+
+> 在某些狀況，你可能需要調整虛擬記憶體的設定，可以使用指令：`sysctl -w vm.max_map_count=262144`.
 
 1. 檢查 `.env` 文件並根據需要設定相應的值。
 
