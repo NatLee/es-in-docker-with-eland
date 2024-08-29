@@ -6,6 +6,8 @@ This is an example of Elasticsearch in Docker with Eland.
 
 ## Usage
 
+> In some cases, you may need to increase the maximum of virtual memory by running `sysctl -w vm.max_map_count=262144`.
+
 1. Check `.env` file and set the values if needed.
 
 2. Create a folder for Elasticsearch data:
