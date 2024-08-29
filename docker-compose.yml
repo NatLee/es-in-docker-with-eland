@@ -83,6 +83,7 @@ services:
         echo "        ║       Elastic Stack Setup Complete!       ║            ";
         echo "        ╚═══════════════════════════════════════════╝            ";
         echo "                                                                  ";
+        exit 0;
       '
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
@@ -154,7 +155,7 @@ services:
       backend-elasticsearch:
         condition: service_healthy
       backend-es-setup:
-        condition: service_healthy
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
