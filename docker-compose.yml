@@ -20,6 +20,11 @@ services:
     user: "0"
     command: >
       bash -c '
+        echo "Setting permissions for certs";
+        mkdir -p config/certs/ca && mkdir -p config/certs/elasticsearch
+        chown -R root:root config/certs
+        chmod -R 755 config/certs
+
         if [ x${ELASTIC_PASSWORD} == x ]; then
           echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
           exit 1;
@@ -88,6 +93,7 @@ services:
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+      - _JAVA_OPTIONS=-XX:UseSVE=0
     healthcheck:
       test: ["CMD-SHELL", "[ -f config/certs/elasticsearch/elasticsearch.crt ]"]
       interval: 1s
@@ -121,7 +127,7 @@ services:
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
       - xpack.security.transport.ssl.verification_mode=certificate
       - xpack.license.self_generated.type=basic
-
+      - _JAVA_OPTIONS=-XX:UseSVE=0
     ulimits:
       memlock:
         soft: -1
