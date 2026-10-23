@@ -170,4 +170,6 @@ python -m unittest discover -s tests -v
 
 [Dependabot](.github/dependabot.yml) 每週檢查 pip 與 Actions 更新，並按套件來源分組。Pip 套件主版本升級需另外檢查相容性。
 
+NumPy 固定為仍支援 Python 3.11 的 `2.4.6`；Dependabot 排除 `>=2.5`，因為該系列要求 Python 3.12 以上。調整教學的最低 Python 版本時，請一併檢視此限制；即使只是套件次版本更新，也必須通過完整 Python 測試矩陣。版本需求見 [NumPy 2.4.6](https://pypi.org/project/numpy/2.4.6/) 與 [2.5.4](https://pypi.org/project/numpy/2.5.4/) 的套件資訊。
+
 後續套件更新、遷移與保留既有資料的方法，請閱讀[升級與遷移指南](docs/UPGRADING.zh-TW.md)。
