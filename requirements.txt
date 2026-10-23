@@ -2,7 +2,7 @@
 # Eland 9.2 does not support Python 3.14 or pandas 3.
 eland==9.2.0
 elasticsearch==9.5.1
-numpy==2.3.5
+numpy==2.5.4
 pandas==2.3.3
 python-dotenv==1.2.4
 matplotlib==3.11.2
