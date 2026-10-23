@@ -13,6 +13,10 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
+      # NumPy 2.5+ requires Python >=3.12; this tutorial still supports 3.11.
+      # Revisit this ceiling when the documented Python minimum changes.
+      - dependency-name: numpy
+        versions: [">=2.5"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

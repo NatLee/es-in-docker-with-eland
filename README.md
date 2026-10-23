@@ -170,4 +170,6 @@ Validated on 2026-10-23 with ARM64 Docker and Python 3.12.9: Elasticsearch/Kiban
 
 [Dependabot](.github/dependabot.yml) checks pip and Actions updates weekly and groups updates within each ecosystem. Major pip package upgrades require a separate compatibility review.
 
+NumPy is pinned to `2.4.6`, which supports Python 3.11. Dependabot excludes NumPy `>=2.5` because that series requires Python 3.12 or later. Revisit this limit when changing the tutorial's minimum Python version; even minor package updates must pass the full Python matrix. See the [NumPy 2.4.6](https://pypi.org/project/numpy/2.4.6/) and [2.5.4](https://pypi.org/project/numpy/2.5.4/) package metadata.
+
 For future dependency updates, migration, and preserving existing data, see [Upgrading and migration](docs/UPGRADING.md).

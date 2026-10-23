@@ -2,7 +2,8 @@
 # Eland 9.2 does not support Python 3.14 or pandas 3.
 eland==9.2.0
 elasticsearch==9.5.1
-numpy==2.3.5
+# NumPy 2.5+ drops Python 3.11; keep the Dependabot compatibility ceiling aligned.
+numpy==2.4.6
 pandas==2.3.3
 python-dotenv==1.2.4
 matplotlib==3.11.2
