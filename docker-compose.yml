@@ -1,178 +1,109 @@
-x-common-network: &network
-  networks:
-    - net
-
-x-common-restart: &restart
-  restart: always
-
-x-common-mem-limit: &mem_limit
-  mem_limit: ${MEM_LIMIT}
+name: ${COMPOSE_PROJECT_NAME:-eland-tutorial-v9}
 
 services:
-
   backend-es-setup:
-    <<: [*network]
-    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
-    hostname: ${PROJECT_NAME}.backend-es-setup.${STACK_VERSION}
-    container_name: ${PROJECT_NAME}-backend-es-setup
-    volumes:
-      - ./es-certs:/usr/share/elasticsearch/config/certs
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION:?Run python3 scripts/init_env.py first}
     user: "0"
-    command: >
-      bash -c '
-        echo "Setting permissions for certs";
-        mkdir -p config/certs/ca && mkdir -p config/certs/elasticsearch
-        chown -R root:root config/certs
-        chmod -R 755 config/certs
-
-        if [ x${ELASTIC_PASSWORD} == x ]; then
-          echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
-          exit 1;
-        elif [ x${KIBANA_PASSWORD} == x ]; then
-          echo "Set the KIBANA_PASSWORD environment variable in the .env file";
-          exit 1;
-        fi;
-        echo "Setting up Elasticsearch";
-        if [ ! -f config/certs/ca.zip ]; then
-          echo "Creating CA";
-          bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
-          unzip config/certs/ca.zip -d config/certs;
-        fi;
-        echo "Setting up Elasticsearch certificates";
-        if [ ! -f config/certs/certs.zip ]; then
-          echo "Creating certs";
-          echo -ne \
-          "instances:\n"\
-          "  - name: elasticsearch\n"\
-          "    dns:\n"\
-          "      - backend-elasticsearch\n"\
-          "      - localhost\n"\
-          "    ip:\n"\
-          "      - 127.0.0.1\n"\
-          > config/certs/instances.yml;
-          bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
-          unzip config/certs/certs.zip -d config/certs;
-        fi;
-        echo "Setting file permissions"
-        chown -R root:root config/certs;
-        find . -type d -exec chmod 750 \{\} \;;
-        find . -type f -exec chmod 640 \{\} \;;
-        echo "Waiting for Elasticsearch availability";
-        until curl -s --cacert config/certs/ca/ca.crt https://backend-elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
-        echo "Setting kibana_system password";
-        until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" https://backend-elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
-        echo "All done!";
-        echo "                                                                  ";
-        echo "    ███████╗██╗      █████╗ ███████╗████████╗██╗ ██████╗         ";
-        echo "    ██╔════╝██║     ██╔══██╗██╔════╝╚══██╔══╝██║██╔════╝         ";
-        echo "    █████╗  ██║     ███████║███████╗   ██║   ██║██║              ";
-        echo "    ██╔══╝  ██║     ██╔══██║╚════██║   ██║   ██║██║              ";
-        echo "    ███████╗███████╗██║  ██║███████║   ██║   ██║╚██████╗         ";
-        echo "    ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝ ╚═════╝         ";
-        echo "                                                                  ";
-        echo "    ███████╗████████╗ █████╗  ██████╗██╗  ██╗                    ";
-        echo "    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝                    ";
-        echo "    ███████╗   ██║   ███████║██║     █████╔╝                     ";
-        echo "    ╚════██║   ██║   ██╔══██║██║     ██╔═██╗                     ";
-        echo "    ███████║   ██║   ██║  ██║╚██████╗██║  ██╗                    ";
-        echo "    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝                    ";
-        echo "                                                                  ";
-        echo "        ██╗  ██╗██╗██████╗  █████╗ ███╗   ██╗ █████╗             ";
-        echo "        ██║ ██╔╝██║██╔══██╗██╔══██╗████╗  ██║██╔══██╗            ";
-        echo "        █████╔╝ ██║██████╔╝███████║██╔██╗ ██║███████║            ";
-        echo "        ██╔═██╗ ██║██╔══██╗██╔══██║██║╚██╗██║██╔══██║            ";
-        echo "        ██║  ██╗██║██████╔╝██║  ██║██║ ╚████║██║  ██║            ";
-        echo "        ╚═╝  ╚═╝╚═╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝            ";
-        echo "                                                                  ";
-        echo "        ╔═══════════════════════════════════════════╗            ";
-        echo "        ║       Elastic Stack Setup Complete!       ║            ";
-        echo "        ╚═══════════════════════════════════════════╝            ";
-        echo "                                                                  ";
-        exit 0;
-      '
+    entrypoint: ["/bin/bash", "/setup-certs.sh"]
     environment:
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
-      - _JAVA_OPTIONS=-XX:UseSVE=0
-    healthcheck:
-      test: ["CMD-SHELL", "[ -f config/certs/elasticsearch/elasticsearch.crt ]"]
-      interval: 1s
-      timeout: 5s
-      retries: 120
+      STACK_VERSION: ${STACK_VERSION}
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:-}
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs
+      - ./docker/setup-certs.sh:/setup-certs.sh:ro
+    mem_limit: 1g
 
   backend-elasticsearch:
-    <<: [*network, *restart, *mem_limit]
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
-    hostname: ${PROJECT_NAME}.es01.${STACK_VERSION}
-    container_name: ${PROJECT_NAME}-elasticsearch
-    volumes:
-      - ./es-certs:/usr/share/elasticsearch/config/certs
-      - ./es-data:/usr/share/elasticsearch/data
-    ports:
-      - ${ES_PORT}:9200
+    depends_on:
+      backend-es-setup:
+        condition: service_completed_successfully
+    restart: unless-stopped
     environment:
-      - node.name=elasticsearch
-      - cluster.name=${CLUSTER_NAME}
-      - cluster.initial_master_nodes=elasticsearch
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - bootstrap.memory_lock=true
-      - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=true
-      - xpack.security.http.ssl.key=certs/elasticsearch/elasticsearch.key
-      - xpack.security.http.ssl.certificate=certs/elasticsearch/elasticsearch.crt
-      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
-      - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.key=certs/elasticsearch/elasticsearch.key
-      - xpack.security.transport.ssl.certificate=certs/elasticsearch/elasticsearch.crt
-      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
-      - xpack.security.transport.ssl.verification_mode=certificate
-      - xpack.license.self_generated.type=basic
-      - _JAVA_OPTIONS=-XX:UseSVE=0
+      node.name: elasticsearch
+      cluster.name: ${CLUSTER_NAME:-eland-tutorial}
+      discovery.type: single-node
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?Generate passwords with scripts/init_env.py}
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:-}
+      bootstrap.memory_lock: "true"
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "true"
+      xpack.security.http.ssl.key: certs/elasticsearch/elasticsearch.key
+      xpack.security.http.ssl.certificate: certs/elasticsearch/elasticsearch.crt
+      xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+      xpack.security.transport.ssl.enabled: "true"
+      xpack.security.transport.ssl.key: certs/elasticsearch/elasticsearch.key
+      xpack.security.transport.ssl.certificate: certs/elasticsearch/elasticsearch.crt
+      xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
+      xpack.security.transport.ssl.verification_mode: certificate
+      xpack.license.self_generated.type: basic
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs:ro
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "127.0.0.1:${ES_PORT:-9200}:9200"
+    mem_limit: ${ES_MEM_LIMIT:-2g}
     ulimits:
       memlock:
         soft: -1
         hard: -1
     healthcheck:
       test:
-        [
-          "CMD-SHELL",
-          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
-        ]
+        - CMD-SHELL
+        - >-
+          curl --fail --silent --max-time 8
+          --cacert config/certs/ca/ca.crt
+          --user "elastic:$${ELASTIC_PASSWORD}"
+          'https://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s'
+          > /dev/null
       interval: 10s
       timeout: 10s
-      retries: 120
-    
-  backend-kibana:
-    <<: [*network, *restart, *mem_limit]
+      retries: 30
+      start_period: 30s
+
+  backend-kibana-setup:
     image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
-    hostname: ${PROJECT_NAME}.kb01.${STACK_VERSION}
-    container_name: ${PROJECT_NAME}-kibana
-    volumes:
-      - ./es-certs:/usr/share/kibana/config/certs
-    ports:
-      - ${KIBANA_PORT}:5601
-    environment:
-      - SERVER_HOST=0.0.0.0
-      - ELASTICSEARCH_HOSTS=https://backend-elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=kibana_system
-      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
     depends_on:
       backend-elasticsearch:
         condition: service_healthy
-      backend-es-setup:
+    entrypoint: ["/usr/share/kibana/node/default/bin/node", "/setup-kibana.mjs"]
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+      KIBANA_PASSWORD: ${KIBANA_PASSWORD:?Generate passwords with scripts/init_env.py}
+    volumes:
+      - certs:/usr/share/kibana/config/certs:ro
+      - ./docker/setup-kibana.mjs:/setup-kibana.mjs:ro
+    mem_limit: 256m
+
+  backend-kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    depends_on:
+      backend-kibana-setup:
         condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      SERVER_HOST: 0.0.0.0
+      ELASTICSEARCH_HOSTS: https://backend-elasticsearch:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: ${KIBANA_PASSWORD}
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: /usr/share/kibana/config/certs/ca/ca.crt
+      XPACK_SECURITY_ENCRYPTIONKEY: ${KIBANA_SECURITY_KEY:?Run scripts/init_env.py to generate encryption keys}
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: ${KIBANA_SAVED_OBJECTS_KEY:?Run scripts/init_env.py to generate encryption keys}
+      XPACK_REPORTING_ENCRYPTIONKEY: ${KIBANA_REPORTING_KEY:?Run scripts/init_env.py to generate encryption keys}
+    volumes:
+      - certs:/usr/share/kibana/config/certs:ro
+      - kibanadata:/usr/share/kibana/data
+    ports:
+      - "127.0.0.1:${KIBANA_PORT:-5601}:5601"
+    mem_limit: ${KIBANA_MEM_LIMIT:-1g}
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
-        ]
+      test: ["CMD-SHELL", "curl --fail --silent --max-time 8 http://localhost:5601/api/status > /dev/null"]
       interval: 10s
       timeout: 10s
-      retries: 120
+      retries: 30
+      start_period: 30s
 
-networks:
-  net:
-    name: ${PROJECT_NAME}-elastic-net
-    driver: bridge
+volumes:
+  certs:
+  esdata:
+  kibanadata:
