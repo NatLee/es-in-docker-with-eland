@@ -1,0 +1,163 @@
+name: Tutorial checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 3 1 * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pip check
+      - run: python -m unittest discover -s tests -v
+      - name: Validate scripts, notebooks, and tracked configuration
+        run: |
+          bash -n docker/setup-certs.sh dev-cp-cert.sh dev-es-bash.sh
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+          import nbformat
+
+          tracked = subprocess.check_output(['git', 'ls-files', '-z'], text=True).split('\0')
+          private_configs = [
+              path for path in tracked
+              if Path(path).name != '.env.example'
+              and (Path(path).name == '.env' or Path(path).name.startswith('.env.'))
+          ]
+          assert not private_configs, f'Remove private configuration from Git tracking: {private_configs}'
+
+          for path in Path('notebooks').glob('*.ipynb'):
+              notebook = nbformat.read(path, as_version=4)
+              nbformat.validate(notebook)
+              for cell in notebook.cells:
+                  if cell.cell_type == 'code':
+                      assert not cell.outputs, f'{path}: remove cell outputs before committing'
+                      assert cell.execution_count is None, f'{path}: clear execution counts'
+          PY
+
+  integration:
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ELASTIC_ENV_FILE: .env.ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Prepare an isolated configuration
+        run: |
+          python scripts/init_env.py --output .env.ci
+          python - <<'PY'
+          from pathlib import Path
+          from scripts.init_env import SECRET_KEYS
+
+          for line in Path('.env.ci').read_text().splitlines():
+              key, separator, value = line.partition('=')
+              if separator and key in SECRET_KEYS and value:
+                  print(f'::add-mask::{value}')
+          PY
+          sudo sysctl -w vm.max_map_count=1048576
+          docker compose --env-file .env.ci config --quiet
+      - name: Start Elasticsearch and Kibana
+        run: docker compose --env-file .env.ci up -d --wait --wait-timeout 300
+      - name: Check TLS, Eland queries, and repeatable ingestion
+        run: |
+          bash dev-cp-cert.sh --env-file .env.ci
+          python scripts/check_connection.py
+          python scripts/smoke_test.py
+          python scripts/smoke_test.py
+      - name: Execute every notebook
+        run: |
+          python -m jupyter nbconvert --to notebook --execute notebooks/*.ipynb \
+            --ExecutePreprocessor.timeout=180 --output-dir=artifacts
+      - name: Collect redacted service diagnostics
+        if: failure()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          destination = Path('artifacts/diagnostics')
+          destination.mkdir(parents=True, exist_ok=True)
+          config = Path('.env.ci')
+          if not config.is_file():
+              (destination / 'setup.log').write_text('Configuration was not created; Docker diagnostics skipped.\n')
+              raise SystemExit(0)
+
+          from scripts.init_env import SECRET_KEYS
+
+          secrets = []
+          for line in config.read_text().splitlines():
+              key, separator, value = line.partition('=')
+              if separator and key in SECRET_KEYS and value:
+                  secrets.append(value)
+
+          services = [
+              'backend-es-setup', 'backend-elasticsearch',
+              'backend-kibana-setup', 'backend-kibana',
+          ]
+          commands = {
+              'status.log': ['ps', '-a'],
+              'services.log': ['logs', '--no-color', '--tail=100', '--timestamps', *services],
+          }
+          for filename, arguments in commands.items():
+              try:
+                  result = subprocess.run(
+                      ['docker', 'compose', '--env-file', '.env.ci', *arguments],
+                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                      text=True, errors='replace', timeout=30, check=False,
+                  )
+                  output = f'Exit code: {result.returncode}\n{result.stdout}'
+              except (OSError, subprocess.TimeoutExpired) as error:
+                  output = f'Diagnostics unavailable: {type(error).__name__}\n'
+              for secret in secrets:
+                  output = output.replace(secret, '[REDACTED]')
+              (destination / filename).write_text(output, encoding='utf-8')
+          print(f'Saved redacted service diagnostics to {destination}.')
+          PY
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/diagnostics/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Remove CI containers and generated data
+        if: always()
+        run: |
+          if [ -f .env.ci ]; then
+            docker compose --env-file .env.ci down --volumes --remove-orphans
+          fi
