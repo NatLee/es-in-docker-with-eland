@@ -10,3 +10,15 @@ __pycache__
 
 .DS_Store
 desktop.ini
+
+# Local credentials stay on this machine; commit only the example template.
+.env
+.env.*
+!.env.example
+.venv/
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+artifacts/
+*.pyc

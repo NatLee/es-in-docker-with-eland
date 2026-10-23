@@ -1,4 +1,4 @@
-#!/bin/bash
-export $(grep -v '^#' .env | xargs)
-docker exec -it ${PROJECT_NAME}-elasticsearch /bin/bash
-
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+docker compose "$@" exec backend-elasticsearch /bin/bash
