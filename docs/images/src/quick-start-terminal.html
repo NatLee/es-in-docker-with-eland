@@ -1,0 +1,72 @@
+<!doctype html>
+<!--
+  README terminal image: the quick start from a fresh clone on 2026-11-03 (Windows 11, Docker Desktop
+  29.8.1). Docker commands ran in Git Bash; the Python commands ran in python:3.12-slim with host
+  networking, inside the .venv from step 4. The output is verbatim except for the lines marked as cut
+  (42 lines of `up` progress and the two `docker compose cp` lines). The ports were changed in .env
+  because this run had to stay off the defaults.
+  Render with e.g.
+    msedge --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --window-size=960,760
+           --default-background-color=00000000 --virtual-time-budget=5000
+           --screenshot=quick-start-terminal.png "file:///…/quick-start-terminal.html"
+  then trim the transparent space (magick quick-start-terminal.png -trim +repage …) and convert to WebP.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quick start terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=block" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: transparent; }
+  .term { width: 960px; box-sizing: border-box; border-radius: 14px; overflow: hidden;
+          background: #161b22; border: 1px solid #3d444d; color: #e6edf3; }
+  .bar { height: 38px; display: flex; align-items: center; padding: 0 16px; background: #212830;
+         border-bottom: 1px solid #3d444d; position: relative; }
+  .bar span { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+  .bar .t { position: absolute; left: 0; right: 0; text-align: center; font: 600 13px Inter, "Segoe UI", sans-serif; color: #9198a1; }
+  pre { margin: 0; padding: 18px 22px 22px; font: 13px/21px "JetBrains Mono", Consolas, monospace; white-space: pre; font-variant-ligatures: none; }
+  .p { color: #3fb950; font-weight: 600; }
+  .cmd { color: #ffffff; font-weight: 600; }
+  .opt { color: #79c0ff; }
+  .str { color: #a5d6ff; }
+  .dim { color: #7d8590; }
+  .com { color: #7d8590; font-style: italic; }
+  .cut { color: #7d8590; font-style: italic; }
+  .ok { color: #3fb950; font-weight: 600; }
+  .warn { color: #d29922; }
+  .hl { color: #56d4dd; }
+  .cursor { display: inline-block; width: 8px; height: 17px; background: #e6edf3; vertical-align: -3px; }
+</style>
+</head>
+<body>
+<div class="term">
+  <div class="bar"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span><div class="t">es-in-docker-with-eland</div></div>
+<pre><span class="p">$</span> <span class="cmd">python3</span> scripts/init_env.py
+Created /root/es-in-docker-with-eland/.env. Review ports and versions before starting Docker.
+<span class="p">$</span> <span class="com"># changed in .env for this run: ES_PORT=19200, KIBANA_PORT=15601, COMPOSE_PROJECT_NAME=es-eland-demo</span>
+<span class="p">$</span> <span class="cmd">docker</span> compose up <span class="opt">-d --wait --wait-timeout</span> 300
+<span class="cut">  … 42 lines of progress …</span>
+ Container es-eland-demo-backend-elasticsearch-1 <span class="ok">Healthy</span>
+ Container es-eland-demo-backend-es-setup-1 <span class="dim">Exited</span>
+ Container es-eland-demo-backend-kibana-setup-1 <span class="dim">Exited</span>
+ Container es-eland-demo-backend-kibana-1 <span class="ok">Healthy</span>
+<span class="p">$</span> <span class="cmd">docker</span> compose ps <span class="opt">-a --format</span> <span class="str">'table {{.Service}}\t{{.Status}}\t{{.Ports}}'</span>
+<span class="dim">SERVICE                 STATUS                          PORTS</span>
+backend-elasticsearch   Up About a minute <span class="ok">(healthy)</span>     <span class="hl">127.0.0.1:19200-&gt;9200/tcp</span>
+backend-es-setup        <span class="dim">Exited (0) About a minute ago</span>
+backend-kibana          Up 40 seconds <span class="ok">(healthy)</span>         <span class="hl">127.0.0.1:15601-&gt;5601/tcp</span>
+backend-kibana-setup    <span class="dim">Exited (0) 41 seconds ago</span>
+<span class="p">$</span> <span class="cmd">bash</span> dev-cp-cert.sh
+<span class="cut">  … 2 lines from docker compose cp …</span>
+Copied the public CA certificate to ca.crt
+<span class="p">$</span> <span class="cmd">python</span> scripts/check_connection.py
+Connected: Elasticsearch 9.5.5, cluster eland-tutorial
+TLS certificate verified; cluster health: <span class="ok">green</span>
+<span class="p">$</span> <span class="cmd">python</span> scripts/smoke_test.py
+Connected to Elasticsearch 9.5.5 with verified TLS.
+<span class="ok">PASS</span>: stable IDs, mappings, Eland filters, date queries, aggregation, top-10 sorting, and 20,000-row export.
+Tutorial indices retained: eland-tutorial-flights-v1, eland-tutorial-events-v1
+<span class="p">$</span> <span class="cursor"></span></pre>
+</div>
+</body>
+</html>

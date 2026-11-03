@@ -59,6 +59,17 @@ jobs:
                       assert not cell.outputs, f'{path}: remove cell outputs before committing'
                       assert cell.execution_count is None, f'{path}: clear execution counts'
           PY
+      - name: Keep shell scripts LF in a Windows-style checkout
+        run: |
+          # Git for Windows defaults to core.autocrlf=true; bash in the containers cannot run CRLF scripts.
+          windows_checkout="$RUNNER_TEMP/windows-checkout/"
+          git -c core.autocrlf=true checkout-index --all --prefix="$windows_checkout"
+          scripts=$(git ls-files '*.sh')
+          if (cd "$windows_checkout" && grep -lU $'\r' $scripts); then
+            echo "::error::These scripts check out with CRLF on Windows. Keep '*.sh text eol=lf' in .gitattributes."
+            exit 1
+          fi
+          echo "Shell scripts stay LF with core.autocrlf=true."
 
   integration:
     needs: unit
