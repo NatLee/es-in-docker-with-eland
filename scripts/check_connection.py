@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate TLS, authentication, and the expected Elasticsearch major version."""
+"""Validate TLS, authentication, and that the server major matches the Python client."""
 
 from pathlib import Path
 import sys
@@ -9,19 +9,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from elasticsearch import ApiError
 from elastic_transport import TransportError
 
-from elastic_tutorial import create_client
+from elastic_tutorial import create_client, require_compatible_server
 
 
 def main() -> int:
     try:
         with create_client() as client:
             info = client.info()
-            version = info["version"]["number"]
-            if version.split(".")[0] != "9":
-                raise ValueError(
-                    f"Connected to Elasticsearch {version}; this tutorial expects 9.x. "
-                    "Follow the documented migration path for an existing 8.x cluster."
-                )
+            version = require_compatible_server(info)
             health = client.cluster.health()
             print(f"Connected: Elasticsearch {version}, cluster {info['cluster_name']}")
             print(f"TLS certificate verified; cluster health: {health['status']}")

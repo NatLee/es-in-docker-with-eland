@@ -2,11 +2,6 @@
 set -euo pipefail
 cd /usr/share/elasticsearch
 
-case "${STACK_VERSION:-}" in
-  9.*) ;;
-  *) echo "This tutorial requires Elasticsearch 9.x. Follow the README migration steps for an existing .env." >&2; exit 1 ;;
-esac
-
 cert_dir=config/certs
 mkdir -p "$cert_dir"
 temp_dir=$(mktemp -d)

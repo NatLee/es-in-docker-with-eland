@@ -6,7 +6,6 @@ services:
     user: "0"
     entrypoint: ["/bin/bash", "/setup-certs.sh"]
     environment:
-      STACK_VERSION: ${STACK_VERSION}
       ES_JAVA_OPTS: ${ES_JAVA_OPTS:-}
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
