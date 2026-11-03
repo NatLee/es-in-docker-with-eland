@@ -1,9 +1,9 @@
 <!doctype html>
 <!--
-  README terminal image: the quick start from a fresh clone on 2026-11-03 (Windows 11, Docker Desktop
-  29.8.1). Docker commands ran in Git Bash; the Python commands ran in python:3.12-slim with host
-  networking, inside the .venv from step 4. The output is verbatim except for the lines marked as cut
-  (42 lines of `up` progress and the two `docker compose cp` lines). The ports were changed in .env
+  README terminal image: the quick start from a fresh clone on 2026-11-04 (Windows 11, Docker Desktop
+  29.8.1), right after the 9.5.6 upgrade. Docker commands ran in Git Bash; the Python commands ran in python:3.12-slim with host
+  networking, inside a venv made with the step 4 commands. The output is verbatim except for the lines marked as cut
+  (the image download and progress lines of `up`, and the two `docker compose cp` lines). The ports were changed in .env
   because this run had to stay off the defaults.
   Render with e.g.
     msedge --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --window-size=960,760
@@ -45,10 +45,10 @@
 Created /root/es-in-docker-with-eland/.env. Review ports and versions before starting Docker.
 <span class="p">$</span> <span class="com"># changed in .env for this run: ES_PORT=19200, KIBANA_PORT=15601, COMPOSE_PROJECT_NAME=es-eland-demo</span>
 <span class="p">$</span> <span class="cmd">docker</span> compose up <span class="opt">-d --wait --wait-timeout</span> 300
-<span class="cut">  … 42 lines of progress …</span>
- Container es-eland-demo-backend-elasticsearch-1 <span class="ok">Healthy</span>
- Container es-eland-demo-backend-es-setup-1 <span class="dim">Exited</span>
+<span class="cut">  … 2,317 lines of image download and progress …</span>
  Container es-eland-demo-backend-kibana-setup-1 <span class="dim">Exited</span>
+ Container es-eland-demo-backend-es-setup-1 <span class="dim">Exited</span>
+ Container es-eland-demo-backend-elasticsearch-1 <span class="ok">Healthy</span>
  Container es-eland-demo-backend-kibana-1 <span class="ok">Healthy</span>
 <span class="p">$</span> <span class="cmd">docker</span> compose ps <span class="opt">-a --format</span> <span class="str">'table {{.Service}}\t{{.Status}}\t{{.Ports}}'</span>
 <span class="dim">SERVICE                 STATUS                          PORTS</span>
@@ -60,10 +60,10 @@ backend-kibana-setup    <span class="dim">Exited (0) 41 seconds ago</span>
 <span class="cut">  … 2 lines from docker compose cp …</span>
 Copied the public CA certificate to ca.crt
 <span class="p">$</span> <span class="cmd">python</span> scripts/check_connection.py
-Connected: Elasticsearch 9.5.5, cluster eland-tutorial
+Connected: Elasticsearch 9.5.6, cluster eland-tutorial
 TLS certificate verified; cluster health: <span class="ok">green</span>
 <span class="p">$</span> <span class="cmd">python</span> scripts/smoke_test.py
-Connected to Elasticsearch 9.5.5 with verified TLS.
+Connected to Elasticsearch 9.5.6 with verified TLS.
 <span class="ok">PASS</span>: stable IDs, mappings, Eland filters, date queries, aggregation, top-10 sorting, and 20,000-row export.
 Tutorial indices retained: eland-tutorial-flights-v1, eland-tutorial-events-v1
 <span class="p">$</span> <span class="cursor"></span></pre>

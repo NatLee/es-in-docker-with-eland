@@ -32,18 +32,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   try {
     const page = await browser.newPage();
     await page.emulateTimezone('UTC');
+    // A new Kibana user follows the browser's color scheme, so the public media feature picks the theme.
+    await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: theme }]);
     await page.goto(`${base}/login`, { waitUntil: 'networkidle2', timeout: 120000 });
     if (await page.$('input[name="username"]')) { // Not signed in yet (a reused profile may be).
       await page.type('input[name="username"]', 'elastic');
       await page.type('input[name="password"]', env.ELASTIC_PASSWORD);
       await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 120000 }), page.click('button[type="submit"]')]);
     }
-    // Kibana keeps the light/dark choice in the user profile.
-    await page.evaluate((darkMode) => fetch('/internal/security/user_profile/_data', {
-      method: 'POST',
-      headers: { 'kbn-xsrf': 'true', 'x-elastic-internal-origin': 'Kibana', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userSettings: { darkMode } }),
-    }), theme);
     await page.goto(base + discover, { waitUntil: 'networkidle2', timeout: 120000 });
     await page.waitForSelector('[data-test-subj="discoverQueryHits"], [data-test-subj="unifiedHistogramQueryHits"]', { timeout: 120000 });
     await sleep(6000);
