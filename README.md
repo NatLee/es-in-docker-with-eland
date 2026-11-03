@@ -214,7 +214,7 @@ volume.
 
 ```bash
 # Inspect startup problems.
-docker compose logs --tail=100 backend-es-setup backend-elasticsearch backend-kibana-setup backend-kibana
+docker compose logs --tail=100
 
 # Pause and resume the existing environment.
 docker compose stop

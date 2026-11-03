@@ -166,7 +166,7 @@ Shell 中已匯出的環境變數優先於 `.env`，殘留的 `export` 可能讓
 
 ```bash
 # 查看啟動問題。
-docker compose logs --tail=100 backend-es-setup backend-elasticsearch backend-kibana-setup backend-kibana
+docker compose logs --tail=100
 
 # 暫停及恢復既有環境。
 docker compose stop

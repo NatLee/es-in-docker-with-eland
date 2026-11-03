@@ -135,13 +135,9 @@ jobs:
               if separator and key in SECRET_KEYS and value:
                   secrets.append(value)
 
-          services = [
-              'backend-es-setup', 'backend-elasticsearch',
-              'backend-kibana-setup', 'backend-kibana',
-          ]
           commands = {
               'status.log': ['ps', '-a'],
-              'services.log': ['logs', '--no-color', '--tail=100', '--timestamps', *services],
+              'services.log': ['logs', '--no-color', '--tail=100', '--timestamps'],
           }
           for filename, arguments in commands.items():
               try:
