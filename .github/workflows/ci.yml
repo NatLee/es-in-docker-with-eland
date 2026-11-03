@@ -37,7 +37,7 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - name: Validate scripts, notebooks, and tracked configuration
         run: |
-          bash -n docker/setup-certs.sh dev-cp-cert.sh dev-es-bash.sh
+          git ls-files -z '*.sh' | xargs -0 -n1 bash -n
           python - <<'PY'
           from pathlib import Path
           import subprocess
