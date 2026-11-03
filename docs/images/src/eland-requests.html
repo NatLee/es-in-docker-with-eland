@@ -1,0 +1,157 @@
+<!doctype html>
+<!--
+  README diagram: what Eland sends to Elasticsearch for the calls used in the notebooks, and what comes
+  back. The requests were traced with the elastic_transport logger against the local 9.5.5 cluster and
+  the results are the notebooks' real output (fixed-seed data, so they repeat on every run).
+  Render the light and dark versions (#dark picks the dark theme), then convert to WebP, e.g.
+    msedge --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --window-size=960,610
+           --default-background-color=00000000 --virtual-time-budget=5000
+           --screenshot=eland-requests-light.png "file:///…/eland-requests.html"
+    magick eland-requests-light.png -quality 90 -define webp:method=6 ../eland-requests-light.webp
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>What Eland sends to Elasticsearch</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f6f8fa; --ink: #1f2328; --muted: #59636e; --line: #d1d9e0; --card: #ffffff;
+    --teal: #0b7f7a; --teal-bg: rgba(0,191,179,.09); --pink: #bf3989; --pink-bg: rgba(240,78,152,.07);
+    --str: #0a3069; --kw: #8250df; --num: #0550ae; --wire: #8c959f;
+    --get: #1a7f37; --post: #9a6700; --del: #cf222e;
+    --shadow: 0 1px 2px rgba(31,35,40,.06), 0 6px 18px rgba(31,35,40,.06);
+    --tint1: rgba(0,191,179,.10); --tint2: rgba(240,78,152,.06);
+  }
+  .dark {
+    --bg: #0d1117; --bg2: #1b222c; --ink: #f0f6fc; --muted: #9198a1; --line: #3d444d; --card: #151b23;
+    --teal: #3fd1c7; --teal-bg: rgba(63,209,199,.10); --pink: #f778ba; --pink-bg: rgba(247,120,186,.08);
+    --str: #a5d6ff; --kw: #d2a8ff; --num: #79c0ff; --wire: #6e7681;
+    --get: #3fb950; --post: #e3b341; --del: #f85149;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --tint1: rgba(63,209,199,.12); --tint2: rgba(247,120,186,.07);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; }
+  body { width: 960px; font-family: Inter, "Segoe UI", sans-serif; color: var(--ink); }
+  code, .mono { font-family: "JetBrains Mono", Consolas, monospace; font-variant-ligatures: none; }
+  .frame { position: relative; width: 960px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line);
+           padding: 28px 36px 26px;
+           background: radial-gradient(560px 320px at 96% 0%, var(--tint1), transparent 70%),
+                       radial-gradient(420px 280px at 0% 100%, var(--tint2), transparent 70%), var(--bg); }
+  h1 { margin: 0; font-size: 27px; font-weight: 800; letter-spacing: -0.03em; }
+  .tag { margin: 7px 0 0; font-size: 14.5px; color: var(--muted); }
+  .tag b { color: var(--ink); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: 326px 24px 306px 24px 1fr; margin-top: 20px; row-gap: 8px; }
+  .head { display: contents; }
+  .head div { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 0 14px; }
+  .group { grid-column: 1 / -1; display: flex; align-items: center; gap: 9px; margin-top: 8px; font-size: 13px; font-weight: 600; }
+  .group i { width: 10px; height: 10px; border-radius: 3px; background: var(--teal); }
+  .group.local i { background: var(--pink); }
+  .group span { color: var(--muted); font-weight: 400; }
+  .row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center;
+         background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 12px;
+         box-shadow: var(--shadow); min-height: 58px; }
+  .row.local { border-left-color: var(--pink); }
+  .cell { padding: 10px 14px; }
+  .code { font-family: "JetBrains Mono", Consolas, monospace; font-size: 11.5px; line-height: 1.6; white-space: pre; }
+  .code .s { color: var(--str); } .code .k { color: var(--kw); } .code .n { color: var(--num); }
+  .arrow { display: grid; place-items: center; }
+  .arrow svg path { stroke: var(--wire); }
+  .arrow svg path.h { fill: var(--wire); stroke: none; }
+  .req { display: flex; flex-wrap: wrap; gap: 5px 6px; }
+  .req code { font-size: 11px; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg2); white-space: nowrap; }
+  .req code b { font-weight: 700; margin-right: 5px; }
+  .req .GET b { color: var(--get); } .req .POST b { color: var(--post); } .req .DELETE b { color: var(--del); }
+  .why { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
+  .why code { font-size: 11px; color: var(--ink); }
+  .out { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .out b { color: var(--ink); font-weight: 700; }
+  .big { font-family: "JetBrains Mono", Consolas, monospace; font-size: 18px; font-weight: 600; color: var(--teal); }
+  .local .big { color: var(--pink); }
+  table { border-collapse: collapse; font-family: "JetBrains Mono", Consolas, monospace; font-size: 11.5px; }
+  td { padding: 1px 0; color: var(--ink); white-space: nowrap; }
+  td + td { padding-left: 14px; text-align: right; color: var(--teal); font-weight: 600; }
+  .foot { margin-top: 16px; display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .foot b { color: var(--ink); font-weight: 600; }
+  .foot code { font-size: 11.5px; color: var(--ink); }
+  .foot .badge { flex: none; font-family: "JetBrains Mono", Consolas, monospace; font-weight: 600; font-size: 12px; color: var(--ink);
+                 border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 3px 8px; }
+</style>
+</head>
+<body>
+<script>if (location.hash === '#dark') document.documentElement.className = 'dark';</script>
+<template id="arrow"><svg width="22" height="12" viewBox="0 0 22 12"><path d="M1 6 H15" stroke-width="2" fill="none"/><path class="h" d="M21 6 l-8 -4.5 v9 z"/></svg></template>
+<div class="frame">
+  <h1>What Eland sends to Elasticsearch</h1>
+  <p class="tag">Calls the notebooks make, traced against the local cluster. Only the last two copy documents into Python.</p>
+
+  <div class="grid">
+    <div class="head"><div>You write</div><div></div><div>Eland sends</div><div></div><div>You get back</div></div>
+
+    <div class="group"><i></i>Runs inside Elasticsearch <span>· only the answer travels back</span></div>
+
+    <div class="row">
+      <div class="cell code">events = ed.DataFrame(es,
+    <span class="s">"eland-tutorial-events-v1"</span>)</div>
+      <div class="arrow"></div>
+      <div class="cell"><div class="req"><code class="GET"><b>GET</b>_mapping</code><code class="POST"><b>POST</b>_field_caps</code></div>
+        <div class="why">reads the column types, no documents</div></div>
+      <div class="arrow"></div>
+      <div class="cell out"><b>Eland DataFrame</b><br>20,000 rows × 6 columns, still on the server</div>
+    </div>
+
+    <div class="row">
+      <div class="cell code">len(events[events[<span class="s">"random_number"</span>] &gt; <span class="n">500</span>])</div>
+      <div class="arrow"></div>
+      <div class="cell"><div class="req"><code class="POST"><b>POST</b>_count</code></div>
+        <div class="why">a <code>range</code> query, counted on the server</div></div>
+      <div class="arrow"></div>
+      <div class="cell out"><span class="big">9,996</span></div>
+    </div>
+
+    <div class="row">
+      <div class="cell code">flights[[<span class="s">"Carrier"</span>, <span class="s">"AvgTicketPrice"</span>]]
+    .groupby(<span class="s">"Carrier"</span>).mean()</div>
+      <div class="arrow"></div>
+      <div class="cell"><div class="req"><code class="POST"><b>POST</b>_search</code></div>
+        <div class="why">no hits, just a <code>composite</code> aggregation with <code>avg</code></div></div>
+      <div class="arrow"></div>
+      <div class="cell"><table>
+        <tr><td>Formosa Air</td><td>492.44</td></tr>
+        <tr><td>Island Express</td><td>500.53</td></tr>
+        <tr><td>Pacific Wings</td><td>483.23</td></tr>
+      </table></div>
+    </div>
+
+    <div class="group local"><i></i>Copies documents into Python <span>· in pages of up to 5,000 hits</span></div>
+
+    <div class="row local">
+      <div class="cell code">events.head(<span class="n">5</span>).to_pandas()</div>
+      <div class="arrow"></div>
+      <div class="cell"><div class="req"><code class="POST"><b>POST</b>_pit</code><code class="POST"><b>POST</b>_search</code><code class="DELETE"><b>DELETE</b>_pit</code></div>
+        <div class="why">still one full page of hits; Eland keeps the first 5</div></div>
+      <div class="arrow"></div>
+      <div class="cell out"><span class="big">5</span> rows<br>from a 5,000-hit page</div>
+    </div>
+
+    <div class="row local">
+      <div class="cell code">events.to_pandas()</div>
+      <div class="arrow"></div>
+      <div class="cell"><div class="req"><code class="POST"><b>POST</b>_pit</code><code class="POST"><b>POST</b>_search</code><code class="DELETE"><b>DELETE</b>_pit</code></div>
+        <div class="why"><code>search_after</code> pages of 5,000: 4 full, 1 empty</div></div>
+      <div class="arrow"></div>
+      <div class="cell out"><span class="big">20,000</span> rows<br>5.3 MiB in pandas</div>
+    </div>
+  </div>
+
+  <div class="foot"><span class="badge">10,000</span><div><b>Is not a limit on how much you can read.</b> It is the default page window
+    (<code>index.max_result_window</code>) for <code>from</code> + <code>size</code>. Eland pages past it with a point in time
+    and <code>search_after</code>, so the tutorial never changes that setting.</div></div>
+</div>
+<script>
+  for (const el of document.querySelectorAll('.arrow')) el.appendChild(document.getElementById('arrow').content.cloneNode(true));
+</script>
+</body>
+</html>

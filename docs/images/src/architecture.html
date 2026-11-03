@@ -1,0 +1,209 @@
+<!doctype html>
+<!--
+  README diagram: which containers run, which ports they open, and where the Python side reads and writes.
+  Render the light and dark versions (#dark picks the dark theme) with a Chromium-based browser, then
+  convert to WebP, e.g.
+    msedge --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --window-size=960,650
+           --default-background-color=00000000 --virtual-time-budget=5000
+           --screenshot=architecture-light.png "file:///…/architecture.html"
+    magick architecture-light.png -quality 90 -define webp:method=6 ../architecture-light.webp
+  Names, ports and counts come from docker-compose.yml, .env.example and elastic_tutorial/data.py.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>es-in-docker-with-eland architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f6f8fa; --ink: #1f2328; --muted: #59636e; --line: #d1d9e0; --card: #ffffff;
+    --teal: #0b7f7a; --blue: #0969da; --wire: #8c959f; --once: #6e7781;
+    --shadow: 0 1px 2px rgba(31,35,40,.06), 0 6px 18px rgba(31,35,40,.06);
+    --tint1: rgba(0,191,179,.10); --tint2: rgba(240,78,152,.06); --box: rgba(246,248,250,.7);
+  }
+  .dark {
+    --bg: #0d1117; --bg2: #1b222c; --ink: #f0f6fc; --muted: #9198a1; --line: #3d444d; --card: #151b23;
+    --teal: #3fd1c7; --blue: #4493f8; --wire: #6e7681; --once: #8b949e;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --tint1: rgba(63,209,199,.12); --tint2: rgba(247,120,186,.07); --box: rgba(21,27,35,.55);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; }
+  body { width: 960px; height: 650px; font-family: Inter, "Segoe UI", sans-serif; color: var(--ink); }
+  code, .mono { font-family: "JetBrains Mono", Consolas, monospace; font-variant-ligatures: none; }
+  .frame { position: relative; width: 960px; height: 650px; border-radius: 22px; overflow: hidden;
+           border: 1px solid var(--line);
+           background: radial-gradient(560px 320px at 96% 0%, var(--tint1), transparent 70%),
+                       radial-gradient(420px 280px at 0% 100%, var(--tint2), transparent 70%), var(--bg); }
+
+  header { position: absolute; left: 36px; top: 28px; display: flex; align-items: center; gap: 16px; }
+  .mark { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; box-shadow: var(--shadow);
+          background: linear-gradient(140deg, #00bfb3, #0b7f7a 45%, #f04e98); }
+  h1 { margin: 0; font-size: 31px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .tag { margin: 7px 0 0; font-size: 15.5px; color: var(--muted); }
+  .tag b { color: var(--ink); font-weight: 600; }
+
+  .section { position: absolute; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .docker { position: absolute; left: 286px; top: 108px; width: 638px; height: 448px; border-radius: 18px;
+            border: 1px solid var(--line); background: var(--box); }
+  .docker .section { left: 20px; top: 15px; }
+  .docker .section code { letter-spacing: 0; text-transform: none; font-size: 11.5px; color: var(--ink); }
+  .docker .note { position: absolute; right: 20px; top: 13px; font-size: 12px; color: var(--muted); }
+  .docker .note code { font-size: 11.5px; color: var(--ink); }
+
+  .card { position: absolute; background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+          box-shadow: var(--shadow); padding: 13px 15px; }
+  .card.once { border: 1.5px dashed var(--wire); box-shadow: none; background: color-mix(in srgb, var(--card) 70%, transparent); }
+  .label { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+           display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .label i { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); flex: none; }
+  .svc { display: flex; align-items: center; gap: 7px; font-family: "JetBrains Mono", Consolas, monospace;
+         font-size: 11.5px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .num { display: inline-grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; font-family: Inter, sans-serif;
+         font-size: 11px; font-weight: 700; color: #fff; background: var(--teal); flex: none; }
+  .dark .num { color: #0d1117; }
+  .once .num, .num.once { background: var(--once); }
+  .title { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; margin-top: 8px; }
+  .once .title { font-size: 14.5px; }
+  .sub { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+  .sub code { font-size: 11.5px; color: var(--ink); }
+  .divider { height: 1px; background: var(--line); margin: 11px 0 9px; }
+  .file { display: grid; grid-template-columns: 52px 1fr; align-items: baseline; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .file code { font-size: 12px; font-weight: 600; color: var(--ink); }
+
+  .index { margin-top: 7px; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; background: var(--bg2);
+           display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .index code { white-space: nowrap; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+  .index span { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .index span b { color: var(--teal); font-weight: 700; }
+  .vol { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; font-size: 11.5px; color: var(--muted);
+         padding: 2px 8px 2px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg2); white-space: nowrap; }
+  .vol code { font-size: 11px; color: var(--ink); font-weight: 600; }
+
+  .port { position: absolute; font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; font-weight: 600;
+          padding: 3px 8px; border-radius: 8px; background: var(--card); border: 1.5px solid var(--teal); color: var(--teal);
+          transform: translate(-50%, -50%); white-space: nowrap; }
+  .wire-label { position: absolute; font-size: 11.5px; color: var(--muted); white-space: nowrap; text-align: center;
+                transform: translateX(-50%); line-height: 1.4; }
+  .wire-label code { font-size: 11px; color: var(--ink); }
+
+  svg.wires { position: absolute; inset: 0; pointer-events: none; }
+  .wire { fill: none; stroke: var(--teal); stroke-width: 2; }
+  .wire.soft { stroke: var(--wire); stroke-dasharray: 5 5; }
+  .head { fill: var(--teal); }
+  .head.soft { fill: var(--wire); }
+
+  .steps { position: absolute; left: 36px; right: 36px; top: 574px; height: 52px; display: flex; align-items: center; gap: 11px;
+           padding: 0 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
+  .steps .section { position: static; margin-right: 4px; }
+  .step { display: flex; align-items: center; gap: 7px; font-size: 12px; white-space: nowrap; color: var(--muted); }
+  .step code { font-size: 12px; font-weight: 600; color: var(--ink); }
+  .chev { color: var(--wire); font-size: 16px; line-height: 1; }
+  .legend { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .legend span { width: 22px; height: 14px; border-radius: 4px; border: 1.5px dashed var(--wire); }
+</style>
+</head>
+<body>
+<script>if (location.hash === '#dark') document.documentElement.className = 'dark';</script>
+<div class="frame">
+  <header>
+    <div class="mark">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="24" height="22" rx="4"/><path d="M3 11h24M11 11v15M19 11v15"/>
+      </svg>
+    </div>
+    <div>
+      <h1>es-in-docker-with-eland</h1>
+      <p class="tag">A local <b>Elasticsearch + Kibana 9.x</b> in Docker, explored from Python with <b>Eland</b></p>
+    </div>
+  </header>
+
+  <div class="section" style="left:36px; top:123px">Your machine</div>
+
+  <div class="docker">
+    <div class="section">Docker Compose · project <code>eland-tutorial-v9</code></div>
+    <div class="note">ports open on <code>127.0.0.1</code> only</div>
+  </div>
+
+  <svg class="wires" width="960" height="650">
+    <!-- Python -> Elasticsearch -->
+    <path class="wire" d="M242 252 H384"/><path class="head" d="M392 252 l-10 -5.5 v11 z"/>
+    <!-- Browser -> Kibana -->
+    <path class="wire" d="M242 476 H384"/><path class="head" d="M392 476 l-10 -5.5 v11 z"/>
+    <!-- es-setup -> Elasticsearch (writes certs before it starts) -->
+    <path class="wire soft" d="M712 212 H692"/><path class="head soft" d="M684 212 l10 -5.5 v11 z"/>
+    <!-- kibana-setup -> Elasticsearch (password API call) -->
+    <path class="wire soft" d="M712 318 H692"/><path class="head soft" d="M684 318 l10 -5.5 v11 z"/>
+    <!-- Kibana -> Elasticsearch -->
+    <path class="wire" d="M424 412 V376"/><path class="head" d="M424 368 l-5.5 10 h11 z"/>
+  </svg>
+
+  <div class="port" style="left:286px; top:252px">:9200</div>
+  <div class="wire-label" style="left:339px; top:268px">HTTPS,<br>user <code>elastic</code>,<br>checks <code>ca.crt</code></div>
+  <div class="port" style="left:286px; top:476px">:5601</div>
+  <div class="wire-label" style="left:339px; top:492px">HTTP,<br>sign in as<br><code>elastic</code></div>
+  <div class="wire-label" style="left:436px; top:383px; transform:none; text-align:left">talks to ES over HTTPS as <code>kibana_system</code></div>
+
+  <!-- Your machine -->
+  <div class="card" style="left:36px; top:152px; width:206px; height:196px">
+    <div class="label"><i></i>Python 3.11–3.13</div>
+    <div class="title">Notebooks + scripts</div>
+    <div class="sub">Seed 21,000 sample docs, then query them with <code>eland</code> and <code>pandas</code></div>
+    <div class="divider"></div>
+    <div class="label" style="font-size:9.5px">Git-ignored files</div>
+    <div class="file" style="margin-top:7px"><code>.env</code><span>passwords, ports</span></div>
+    <div class="file"><code>ca.crt</code><span>public CA copy</span></div>
+  </div>
+
+  <div class="card" style="left:36px; top:440px; width:206px; height:72px">
+    <div class="label"><i style="background:var(--blue)"></i>Browser</div>
+    <div class="mono" style="font-size:13px; margin-top:8px">localhost:5601</div>
+  </div>
+
+  <!-- Long-running services -->
+  <div class="card" style="left:392px; top:152px; width:292px; height:216px">
+    <div class="svc"><span class="num">2</span>backend-elasticsearch</div>
+    <div class="title">Elasticsearch 9.5.5</div>
+    <div class="sub">single node · TLS · login required</div>
+    <div class="label" style="font-size:9.5px; margin-top:10px; justify-content:space-between"><span>Tutorial index</span><span>Documents</span></div>
+    <div class="index"><code>eland-tutorial-flights-v1</code><span><b>1,000</b></span></div>
+    <div class="index"><code>eland-tutorial-events-v1</code><span><b>20,000</b></span></div>
+    <div class="vol"><svg width="11" height="12" viewBox="0 0 11 12" fill="none" stroke="currentColor" stroke-width="1.3"><ellipse cx="5.5" cy="2.6" rx="4.6" ry="1.9"/><path d="M.9 2.6v6.8c0 1 2 1.9 4.6 1.9s4.6-.9 4.6-1.9V2.6"/></svg>volume <code>esdata</code></div>
+  </div>
+
+  <div class="card" style="left:392px; top:412px; width:292px; height:126px">
+    <div class="svc"><span class="num">4</span>backend-kibana</div>
+    <div class="title">Kibana 9.5.5</div>
+    <div class="sub">browse the same indices in Discover</div>
+    <div class="vol"><svg width="11" height="12" viewBox="0 0 11 12" fill="none" stroke="currentColor" stroke-width="1.3"><ellipse cx="5.5" cy="2.6" rx="4.6" ry="1.9"/><path d="M.9 2.6v6.8c0 1 2 1.9 4.6 1.9s4.6-.9 4.6-1.9V2.6"/></svg>volume <code>kibanadata</code></div>
+  </div>
+
+  <!-- One-shot setup jobs -->
+  <div class="card once" style="left:712px; top:152px; width:192px; height:118px">
+    <div class="svc"><span class="num">1</span>backend-es-setup</div>
+    <div class="title">Makes TLS certificates</div>
+    <div class="sub">a local CA + node cert</div>
+    <div class="vol"><svg width="11" height="12" viewBox="0 0 11 12" fill="none" stroke="currentColor" stroke-width="1.3"><ellipse cx="5.5" cy="2.6" rx="4.6" ry="1.9"/><path d="M.9 2.6v6.8c0 1 2 1.9 4.6 1.9s4.6-.9 4.6-1.9V2.6"/></svg>volume <code>certs</code></div>
+  </div>
+
+  <div class="card once" style="left:712px; top:284px; width:192px; height:84px">
+    <div class="svc"><span class="num">3</span>backend-kibana-setup</div>
+    <div class="title">Kibana password</div>
+    <div class="sub">sets it for <code>kibana_system</code></div>
+  </div>
+
+  <div class="legend" style="position:absolute; left:712px; top:392px"><span></span>runs once, then exits 0</div>
+  <div class="sub" style="position:absolute; left:712px; top:420px; width:192px; font-size:12px">
+    The other three containers mount <code>certs</code> read-only.
+  </div>
+
+  <div class="steps">
+    <div class="section">Startup order</div>
+    <div class="step"><span class="num once">1</span><code>es-setup</code>exits 0</div><span class="chev">›</span>
+    <div class="step"><span class="num">2</span><code>elasticsearch</code>healthy</div><span class="chev">›</span>
+    <div class="step"><span class="num once">3</span><code>kibana-setup</code>exits 0</div><span class="chev">›</span>
+    <div class="step"><span class="num">4</span><code>kibana</code>healthy</div>
+      </div>
+</div>
+</body>
+</html>
