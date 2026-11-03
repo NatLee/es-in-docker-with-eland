@@ -14,7 +14,7 @@
 python3 scripts/init_env.py --output .env.v9
 ```
 
-檢查 `.env.v9`，保留 `STACK_VERSION=9.5.5`，並使用不同的 `COMPOSE_PROJECT_NAME`。舊服務仍在執行時，請用原本的 Compose 設定停止它，或在新檔案設定未使用的連接埠，例如 `ES_PORT=19200`、`KIBANA_PORT=15601`。不同專案名稱能隔離資料卷，但無法避免主機連接埠衝突。
+檢查 `.env.v9`，保留模板中的 `STACK_VERSION`，並使用不同的 `COMPOSE_PROJECT_NAME`。舊服務仍在執行時，請用原本的 Compose 設定停止它，或在新檔案設定未使用的連接埠，例如 `ES_PORT=19200`、`KIBANA_PORT=15601`。不同專案名稱能隔離資料卷，但無法避免主機連接埠衝突。
 
 ```bash
 docker compose --env-file .env.v9 config --quiet
@@ -47,7 +47,7 @@ bash dev-es-bash.sh --env-file .env.v9
 
 1. 盤點索引、索引建立版本、外掛、用戶端與 Kibana saved objects。先依確切的起點和目標版本確認[支援的升級路徑](https://www.elastic.co/docs/deploy-manage/upgrade/plan-upgrade)。
 2. 設定叢集外的 snapshot repository、建立快照，並在獨立叢集驗證還原。本教學沒有設定自動備份。複製執行中的資料目錄不能取代 Elasticsearch 支援的快照備份。詳見[快照與還原](https://www.elastic.co/docs/deploy-manage/tools/snapshot-and-restore)。
-3. 升級到 `9.5.5` 前，先將舊叢集升至最新支援的 `8.19.x` 修補版本。執行 Kibana Upgrade Assistant、解決 critical 項目，並處理 8.0 以前建立的索引。請依[主版本升級準備](https://www.elastic.co/docs/deploy-manage/upgrade/prepare-to-upgrade)完成檢查。
+3. 升級到 `.env.example` 指定的版本前，先將舊叢集升至最新支援的 `8.19.x` 修補版本。執行 Kibana Upgrade Assistant、解決 critical 項目，並處理 8.0 以前建立的索引。請依[主版本升級準備](https://www.elastic.co/docs/deploy-manage/upgrade/prepare-to-upgrade)完成檢查。
 4. 在測試環境演練，驗證查詢與資料。先升級 Elasticsearch，再升級相同目標版本的 Kibana；本專案為單節點，需安排停機。依[Elasticsearch 升級程序](https://www.elastic.co/docs/deploy-manage/upgrade/deployment-or-cluster/elasticsearch)與 [Kibana 升級程序](https://www.elastic.co/docs/deploy-manage/upgrade/deployment-or-cluster/kibana)操作。
 5. 伺服器升級完成後才升級 Python client。新版 9.x client 不相容於 8.x 叢集，遷移完成前請保留舊 Python 環境。詳見 [Python client 相容性](https://www.elastic.co/docs/reference/elasticsearch/clients/python#compatibility)。
 
@@ -58,7 +58,8 @@ Elasticsearch 無法將升級後的資料目錄降版。需要復原時，應建
 每次規劃更新時：
 
 1. 閱讀官方版本說明與相容性文件，選定明確的 Elastic Stack 版本，維持 Elasticsearch 與 Kibana 一致；同時檢查 Eland、Elasticsearch Python client、pandas 與 Python 需求。
-2. 更新 `.env.example`、套件版本及兩份 README。使用者的私人 `.env` 需自行調整，模板更新不會覆寫它；繼續使用既有環境時，請保留已產生的 Kibana 加密金鑰。
+2. 修改 `.env.example` 的 `STACK_VERSION`。Elastic 版本只寫在這裡，Compose、CI 與 README 的徽章都從這裡讀；套件版本則在 `requirements.txt`。Dependabot 讀不懂 `.env` 檔，不會提出 Elastic Stack 的更新，請自行留意 Elastic 的版本說明。
+   模板更新不會覆寫使用者的私人 `.env`。要把既有環境升到同一主版本的新版時，修改該 `.env` 的 `STACK_VERSION`，再執行 `docker compose up -d --wait --wait-timeout 300`。Elasticsearch 會就地升級資料且無法降回，資料重要時請先建立快照。繼續使用既有環境時，請保留已產生的 Kibana 加密金鑰。
 3. 使用獨立 Compose 專案、未使用的連接埠與全新虛擬環境驗證。執行 `python -m pip check`、離線單元測試、smoke test 與兩份 Notebook。確認重跑不會累加筆數、TLS 驗證正常，且停止／啟動後資料仍存在。
 4. 在變更說明中記錄版本與實際驗證結果，清楚區分靜態檢查與連線叢集測試。自動提出的套件更新仍需審查與驗證。
 

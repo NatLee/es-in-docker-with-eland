@@ -1,7 +1,7 @@
 <!doctype html>
 <!--
   README diagram: what Eland sends to Elasticsearch for the calls used in the notebooks, and what comes
-  back. The requests were traced with the elastic_transport logger against the local 9.5.5 cluster and
+  back. The requests were traced with the elastic_transport logger against the local cluster (the STACK_VERSION in .env.example) and
   the results are the notebooks' real output (fixed-seed data, so they repeat on every run).
   Render the light and dark versions (#dark picks the dark theme), then convert to WebP, e.g.
     msedge --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --window-size=960,610

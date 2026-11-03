@@ -1,4 +1,4 @@
-# Tutorial baseline: Python 3.11-3.13, Elasticsearch/Kibana 9.5.5.
+# Tutorial baseline: Python 3.11-3.13. The Elastic Stack version is STACK_VERSION in .env.example.
 # Eland 9.2 does not support Python 3.14 or pandas 3.
 eland==9.2.0
 elasticsearch==9.5.1
