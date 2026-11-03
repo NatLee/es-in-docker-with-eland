@@ -1,0 +1,4 @@
+# These scripts run in bash inside Linux containers (and in Git Bash). With
+# core.autocrlf=true, the Git for Windows default, they would check out as CRLF
+# and the certificate setup container would die on "set: pipefail: invalid option".
+*.sh text eol=lf
