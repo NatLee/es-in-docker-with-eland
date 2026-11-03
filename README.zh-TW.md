@@ -10,6 +10,7 @@
   <a href=".env.example"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FNatLee%2Fes-in-docker-with-eland%2Fmain%2F.env.example&search=STACK_VERSION%3D(%5CS%2B)&replace=%241&label=Elastic%20Stack&color=005571&logo=elasticsearch" alt="Elastic Stack 版本，讀自 .env.example 的 STACK_VERSION"></a>
   <a href="requirements.txt"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FNatLee%2Fes-in-docker-with-eland%2Fmain%2Frequirements.txt&search=eland%3D%3D(%5CS%2B)&replace=%241&label=Eland&color=00bfb3" alt="Eland 版本，讀自 requirements.txt"></a>
   <img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776ab?logo=python&logoColor=white" alt="Python 3.11 | 3.12 | 3.13">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/NatLee/es-in-docker-with-eland" alt="授權：MIT"></a>
 </p>
 
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-TW.md">繁體中文</a></p>
@@ -228,3 +229,7 @@ python -m unittest discover -s tests -v
 README 裡的圖片由 [docs/images/src/](docs/images/src/) 的 HTML 原始檔產生；終端機輸出、Kibana 畫面和圖中的數字都來自實際執行。
 
 後續套件更新、從 8.x 遷移與保留既有資料的方法，請閱讀[升級與遷移指南](docs/UPGRADING.zh-TW.md)。
+
+## 授權
+
+以 [MIT 授權](LICENSE)釋出。

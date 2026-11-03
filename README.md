@@ -10,6 +10,7 @@
   <a href=".env.example"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FNatLee%2Fes-in-docker-with-eland%2Fmain%2F.env.example&search=STACK_VERSION%3D(%5CS%2B)&replace=%241&label=Elastic%20Stack&color=005571&logo=elasticsearch" alt="Elastic Stack version, read from STACK_VERSION in .env.example"></a>
   <a href="requirements.txt"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FNatLee%2Fes-in-docker-with-eland%2Fmain%2Frequirements.txt&search=eland%3D%3D(%5CS%2B)&replace=%241&label=Eland&color=00bfb3" alt="Eland version, read from requirements.txt"></a>
   <img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776ab?logo=python&logoColor=white" alt="Python 3.11 | 3.12 | 3.13">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/NatLee/es-in-docker-with-eland" alt="License: MIT"></a>
 </p>
 
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-TW.md">繁體中文</a></p>
@@ -301,3 +302,7 @@ terminal output, the Kibana screen and the numbers in the diagrams come from a r
 
 For dependency updates, migrating from 8.x and keeping existing data, see
 [Upgrading and migration](docs/UPGRADING.md).
+
+## License
+
+Released under the [MIT License](LICENSE).
