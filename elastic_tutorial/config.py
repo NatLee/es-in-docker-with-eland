@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from importlib.metadata import version as installed_version
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
@@ -92,3 +93,20 @@ def create_client(config: ElasticsearchConfig | None = None) -> Elasticsearch:
         max_retries=3,
         retry_on_timeout=True,
     )
+
+
+def require_compatible_server(info: Mapping[str, Any], client_version: str | None = None) -> str:
+    """Return the server version from ``client.info()``; raise if its major differs from the client's.
+
+    The Elasticsearch Python client only works with servers of its own major version, so the
+    supported major comes from the installed client (pinned in requirements.txt) instead of a
+    number repeated in every script and notebook.
+    """
+    server = info["version"]["number"]
+    client = client_version or installed_version("elasticsearch")
+    if server.split(".")[0] != client.split(".")[0]:
+        raise ValueError(
+            f"Connected to Elasticsearch {server}, but the installed Python client is {client}; "
+            "their major versions must match. See docs/UPGRADING.md."
+        )
+    return server

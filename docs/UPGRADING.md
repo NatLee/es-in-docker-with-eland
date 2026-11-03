@@ -14,7 +14,7 @@ The following path keeps your existing `.env` untouched:
 python3 scripts/init_env.py --output .env.v9
 ```
 
-Review `.env.v9`. Keep `STACK_VERSION=9.5.5` and a new, distinct `COMPOSE_PROJECT_NAME`. If the old stack is still running, either stop it using its original Compose configuration or change the new file to unused ports, for example `ES_PORT=19200` and `KIBANA_PORT=15601`. A different project name isolates volumes, but does not prevent host-port collisions.
+Review `.env.v9`. Keep the `STACK_VERSION` from the template and use a new, distinct `COMPOSE_PROJECT_NAME`. If the old stack is still running, either stop it using its original Compose configuration or change the new file to unused ports, for example `ES_PORT=19200` and `KIBANA_PORT=15601`. A different project name isolates volumes, but does not prevent host-port collisions.
 
 ```bash
 docker compose --env-file .env.v9 config --quiet
@@ -47,7 +47,7 @@ This requires a cluster upgrade plan; changing `STACK_VERSION` alone is insuffic
 
 1. Inventory indices, index creation versions, plugins, clients, and Kibana saved objects. Check the [supported upgrade path](https://www.elastic.co/docs/deploy-manage/upgrade/plan-upgrade) for your exact starting and target versions.
 2. Configure an off-cluster snapshot repository, take a snapshot, and verify recovery on a separate cluster. This tutorial does not configure automatic backups. A copy of a running data directory is not a supported replacement for an Elasticsearch snapshot. See [snapshot and restore](https://www.elastic.co/docs/deploy-manage/tools/snapshot-and-restore).
-3. Upgrade the old cluster to the latest supported `8.19.x` patch before targeting `9.5.5`. Run Kibana's Upgrade Assistant, resolve critical issues, and handle indices created before 8.0. Follow the [major upgrade preparation](https://www.elastic.co/docs/deploy-manage/upgrade/prepare-to-upgrade) instructions.
+3. Upgrade the old cluster to the latest supported `8.19.x` patch before targeting the version in `.env.example`. Run Kibana's Upgrade Assistant, resolve critical issues, and handle indices created before 8.0. Follow the [major upgrade preparation](https://www.elastic.co/docs/deploy-manage/upgrade/prepare-to-upgrade) instructions.
 4. Rehearse the upgrade and validate your queries and data. Upgrade Elasticsearch first, followed by Kibana at the same target version. Account for downtime with this single-node topology. Follow the [Elasticsearch upgrade procedure](https://www.elastic.co/docs/deploy-manage/upgrade/deployment-or-cluster/elasticsearch) and [Kibana upgrade procedure](https://www.elastic.co/docs/deploy-manage/upgrade/deployment-or-cluster/kibana).
 5. Upgrade the Python client after the server. The new 9.x client is not compatible with an 8.x cluster; keep the old Python environment available until migration completes. See [Python client compatibility](https://www.elastic.co/docs/reference/elasticsearch/clients/python#compatibility).
 
@@ -58,7 +58,8 @@ Elasticsearch cannot downgrade a data directory after an upgrade. Recovery means
 For each planned update:
 
 1. Review official release notes and compatibility guidance. Choose an exact Elastic Stack version; keep Elasticsearch and Kibana aligned. Check Eland, the Elasticsearch Python client, pandas, and Python requirements together.
-2. Update `.env.example`, package pins, and both READMEs. Existing private `.env` files need a deliberate local edit; they are not replaced by a template update. Preserve the generated Kibana encryption keys when reusing an existing environment.
+2. Change `STACK_VERSION` in `.env.example`. It is the only place the Elastic version is written: Compose, CI and the README badges read it from there. Package pins live in `requirements.txt`. Dependabot can't read `.env` files, so it won't propose Elastic Stack updates; watch Elastic's release notes instead.
+   Existing private `.env` files are not replaced by a template update. To move an existing environment to a newer version of the same major, change `STACK_VERSION` in that `.env` and run `docker compose up -d --wait --wait-timeout 300`. Elasticsearch upgrades the data in place and cannot go back, so take a snapshot first if the data matters. Preserve the generated Kibana encryption keys when reusing an existing environment.
 3. Test in a separate Compose project with unused ports and a freshly created virtual environment. Run `python -m pip check`, the offline unit tests, the smoke test, and both notebooks. Verify that a second seed succeeds, counts stay stable, TLS is validated, and data survives stop/start.
 4. Record the versions and actual validation results in the change description. Distinguish static checks from tests against a running cluster. Dependency update proposals still require review and validation.
 

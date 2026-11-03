@@ -13,7 +13,7 @@ import pandas as pd
 from elasticsearch import ApiError
 from elastic_transport import TransportError
 
-from elastic_tutorial import create_client
+from elastic_tutorial import create_client, require_compatible_server
 from elastic_tutorial.data import (
     EVENTS_COUNT,
     EVENTS_INDEX,
@@ -33,8 +33,7 @@ def require(condition: bool, message: str) -> None:
 
 def run_checks() -> None:
     with create_client() as client:
-        version = client.info()["version"]["number"]
-        require(version.split(".")[0] == "9", f"Expected Elasticsearch 9.x, found {version}; review migration instructions.")
+        version = require_compatible_server(client.info())
         print(f"Connected to Elasticsearch {version} with verified TLS.")
 
         require(seed_flights(client) == FLIGHTS_COUNT, "Flight bulk write count differs.")
@@ -61,7 +60,8 @@ def run_checks() -> None:
         august_end = datetime(2024, 9, 1, tzinfo=timezone.utc)
         expected_august = sum(august_start <= datetime.fromisoformat(row["timestamp"]) < august_end for row in source_events)
         require(len(events.es_query(date_query)) == expected_august, "Eland date range differs.")
-        require(len(events.es_query({"match": {"message": "payment"}})) == EVENTS_COUNT // 4, "Full-text query differs.")
+        expected_payments = sum("payment" in row["message"].lower() for row in source_events)
+        require(len(events.es_query({"match": {"message": "payment"}})) == expected_payments, "Full-text query differs.")
 
         # id is always present; its value_count is an exact document count here.
         grouped = flights[["Carrier", "id"]].groupby("Carrier").count()["id"]

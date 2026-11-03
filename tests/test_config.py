@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from elastic_tutorial import create_client, load_config
+from elastic_tutorial import create_client, load_config, require_compatible_server
 
 
 class ConfigTests(unittest.TestCase):
@@ -98,6 +98,21 @@ class ConfigTests(unittest.TestCase):
         self.assertTrue(constructor.call_args.kwargs["verify_certs"])
         self.assertEqual(constructor.call_args.kwargs["ca_certs"], str(self.root / "ca.crt"))
         self.assertEqual(constructor.call_args.kwargs["basic_auth"], ("elastic", "file-password"))
+
+
+class ServerVersionTests(unittest.TestCase):
+    def test_server_must_share_the_client_major_version(self):
+        self.assertEqual(require_compatible_server({"version": {"number": "9.5.6"}}, client_version="9.5.1"), "9.5.6")
+        with self.assertRaisesRegex(ValueError, r"8\.19\.0.*9\.5\.1"):
+            require_compatible_server({"version": {"number": "8.19.0"}}, client_version="9.5.1")
+
+    def test_supported_major_comes_from_the_installed_client(self):
+        # A future client major moves the supported server major with it; nothing else to edit.
+        with patch("elastic_tutorial.config.installed_version", return_value="10.0.0") as installed:
+            self.assertEqual(require_compatible_server({"version": {"number": "10.1.0"}}), "10.1.0")
+            with self.assertRaisesRegex(ValueError, "major versions must match"):
+                require_compatible_server({"version": {"number": "9.5.6"}})
+        installed.assert_called_with("elasticsearch")
 
 
 if __name__ == "__main__":

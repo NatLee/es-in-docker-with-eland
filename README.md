@@ -7,9 +7,10 @@
 
 <p align="center">
   <a href="https://github.com/NatLee/es-in-docker-with-eland/actions/workflows/ci.yml"><img src="https://github.com/NatLee/es-in-docker-with-eland/actions/workflows/ci.yml/badge.svg" alt="Tutorial checks"></a>
-  <img src="https://img.shields.io/badge/Elastic%20Stack-9.5.5-005571?logo=elasticsearch" alt="Elastic Stack 9.5.5">
-  <img src="https://img.shields.io/badge/Eland-9.2.0-00bfb3" alt="Eland 9.2.0">
+  <a href=".env.example"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FNatLee%2Fes-in-docker-with-eland%2Fmain%2F.env.example&search=STACK_VERSION%3D(%5CS%2B)&replace=%241&label=Elastic%20Stack&color=005571&logo=elasticsearch" alt="Elastic Stack version, read from STACK_VERSION in .env.example"></a>
+  <a href="requirements.txt"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FNatLee%2Fes-in-docker-with-eland%2Fmain%2Frequirements.txt&search=eland%3D%3D(%5CS%2B)&replace=%241&label=Eland&color=00bfb3" alt="Eland version, read from requirements.txt"></a>
   <img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776ab?logo=python&logoColor=white" alt="Python 3.11 | 3.12 | 3.13">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/NatLee/es-in-docker-with-eland" alt="License: MIT"></a>
 </p>
 
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-TW.md">繁體中文</a></p>
@@ -34,8 +35,8 @@ itself is served over plain HTTP, which is fine for localhost and not meant for 
 | Docker | Docker Engine or Docker Desktop with the `docker compose` plugin (it must support `up --wait`) |
 | Memory | At least 4 GB for Docker, plus some room for Jupyter |
 | Python | 3.11–3.13; 3.12 is what CI runs the full tutorial on |
-| Elasticsearch and Kibana | `9.5.5`, pinned together in [.env.example](.env.example) |
-| Eland | `9.2.0`; all Python pins are in [requirements.txt](requirements.txt) |
+| Elasticsearch and Kibana | 9.x, one exact version for both: `STACK_VERSION` in [.env.example](.env.example) (the badge above shows it) |
+| Eland and the Python client | Pinned in [requirements.txt](requirements.txt) |
 
 On Linux, check `sysctl vm.max_map_count`. If it is below `1048576`, run
 `sudo sysctl -w vm.max_map_count=1048576` and make it persistent for your distribution. On Docker
@@ -109,7 +110,7 @@ this tutorial, or already have an `.env`?** Read the [migration guide](docs/UPGR
    document IDs instead of adding duplicates. A good run looks like this:
 
    <p align="center">
-     <img src="docs/images/quick-start-terminal.webp" alt="Terminal: docker compose up --wait brings all four containers up, docker compose ps shows Elasticsearch and Kibana healthy and both setup containers exited with code 0, dev-cp-cert.sh copies ca.crt, check_connection.py reports Elasticsearch 9.5.5 with a verified certificate and green health, and smoke_test.py prints PASS" width="860">
+     <img src="docs/images/quick-start-terminal.webp" alt="Terminal: docker compose up --wait brings all four containers up, docker compose ps shows Elasticsearch and Kibana healthy and both setup containers exited with code 0, dev-cp-cert.sh copies ca.crt, check_connection.py reports the Elasticsearch version with a verified certificate and green health, and smoke_test.py prints PASS" width="860">
    </p>
 
 6. **Open the notebooks.**
@@ -213,7 +214,7 @@ volume.
 
 ```bash
 # Inspect startup problems.
-docker compose logs --tail=100 backend-es-setup backend-elasticsearch backend-kibana-setup backend-kibana
+docker compose logs --tail=100
 
 # Pause and resume the existing environment.
 docker compose stop
@@ -237,7 +238,7 @@ project's volumes in Docker Desktop, removes the data and the certificates; it i
 | Symptom | What to check |
 | --- | --- |
 | Startup timeout / unhealthy services | `docker compose ps -a` and the logs. Confirm Docker's memory and `vm.max_map_count`; the first image download can take a while. |
-| `backend-es-setup` logs `set: pipefail: invalid option name` | The scripts were checked out with Windows (CRLF) line endings. Pull the latest version, which pins them to LF, then check the three scripts out again: `rm dev-cp-cert.sh dev-es-bash.sh docker/setup-certs.sh && git checkout -- dev-cp-cert.sh dev-es-bash.sh docker/setup-certs.sh`. Pulling alone does not rewrite them. |
+| `backend-es-setup` logs `set: pipefail: invalid option name` | The scripts were checked out with Windows (CRLF) line endings. Pull the latest version, which pins them to LF, then check the scripts out again: `git rm -q --cached -- '*.sh' && git checkout HEAD -- '*.sh'`. Pulling alone does not rewrite them. |
 | `401` / authentication failure | Use `elastic` and the password this volume was created with. Check shell overrides and the selected env file; changing `.env` later doesn't reset an existing account. |
 | Missing CA / certificate verification failure | Run `bash dev-cp-cert.sh` for the same project, check `ELASTIC_CA_CERT`, and use `localhost` or `127.0.0.1`. Keep certificate verification on. |
 | Kibana URL fails | Use `http://localhost:5601` (or your `KIBANA_PORT`) and confirm that Kibana setup exited with code 0. |
@@ -249,21 +250,21 @@ project's volumes in Docker Desktop, removes the data and the certificates; it i
 
 ## Versions
 
-The Elastic version was checked against the
-[official Docker guide](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-compose)
-on 2026-10-23. Exact pins make the starting point explicit; future releases still need a compatibility
-check and a run through CI.
+Every version is written in exactly one file, and everything else reads it from there:
 
-Eland's latest stable release is `9.2.0` (checked on 2026-10-23, published 2025-10-30). This tutorial
-moved from `8.15.0` to `9.2.0`, which adds NumPy 2 and Python 3.13 support and drops Python 3.9. See
-[PyPI](https://pypi.org/project/eland/) and the
-[release notes](https://github.com/elastic/eland/releases/tag/v9.2.0).
+- **Elastic Stack**: `STACK_VERSION` in [.env.example](.env.example). Compose uses it for both images,
+  CI starts exactly that version, and the badge at the top reads it. Upgrading the tutorial is a
+  one-line change to that file; CI then runs the whole tutorial against the new version. Your own `.env`
+  keeps the version it was created with, see [Upgrading and migration](docs/UPGRADING.md).
+- **Python packages**: [requirements.txt](requirements.txt). Dependabot proposes updates every week.
+- **Supported server major**: taken from the installed Elasticsearch Python client, which only talks to
+  servers of its own major version. The scripts and notebooks check this for you and say which side to
+  change if the two don't match.
 
 Eland and Elasticsearch are versioned separately. For these DataFrame examples, matching major versions
-is enough, so Eland 9.2.0 works with Elasticsearch 9.5.5. Importing NLP/PyTorch models needs matching
-minor versions and is outside this tutorial. Eland requires Python `>=3.10,<3.14` and supports pandas
-1.5 and 2; this project uses Python 3.11–3.13 and pandas 2. See
-[Eland compatibility](https://github.com/elastic/eland/tree/v9.2.0#compatibility).
+is enough. Importing NLP/PyTorch models needs matching minor versions and is outside this tutorial. See
+[Eland's compatibility notes](https://github.com/elastic/eland#compatibility) and Elastic's
+[Docker guide](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-compose).
 
 ## Validation and maintenance
 
@@ -278,29 +279,30 @@ With a healthy local cluster, run `python scripts/smoke_test.py` for integration
 notebooks from fresh kernels. Unit tests alone don't prove that Docker starts or that the connection
 works.
 
-Validated on 2026-10-23 with ARM64 Docker and Python 3.12.9: Elasticsearch/Kibana 9.5.5 became healthy,
-all 21 unit tests passed, both notebooks ran completely, 20,000 rows were exported, and the data survived
-recreating the containers. Recovery after an interrupted certificate setup was verified too. On
-2026-11-03 a fresh clone went through the quick start again on Windows 11 with Docker Desktop 29.8.1
-(x86-64) and Python 3.12: the stack was healthy in 76 seconds with cached images, the connection check
-and the smoke test passed, and both notebooks ran.
+Besides CI, the quick start has been run by hand from a fresh clone on ARM64 Docker (2026-10-23, which
+also checked that data survives recreating the containers and that an interrupted certificate setup
+recovers) and on Windows 11 with Docker Desktop on x86-64 (2026-11-03, and again on 2026-11-04 after a
+stack upgrade).
 
 [GitHub Actions](.github/workflows/ci.yml) runs on pushes to `main`, on every pull request, on demand
-and once a month. Unit tests on Python 3.11 and 3.13 must pass, along with a check that the shell
-scripts keep LF line endings in a Windows-style checkout. Then the Python 3.12 integration job starts
+and once a month. Unit tests on Python 3.11 and 3.13 must pass, along with a syntax check of every
+shell script and a check that they keep LF line endings in a Windows-style checkout. Then the Python 3.12 integration job starts
 Docker, runs the smoke test twice and executes both notebooks. New commits cancel superseded runs,
 actions are pinned to commit SHAs, and failure diagnostics are kept for seven days.
 
 [Dependabot](.github/dependabot.yml) checks pip and Actions updates weekly and groups them per
-ecosystem. Major pip upgrades need a separate compatibility review. NumPy is pinned to `2.4.6`, the last
-series that still supports Python 3.11, and Dependabot ignores NumPy `>=2.5` because that series needs
-Python 3.12 or later. Revisit this limit when the tutorial's minimum Python version changes; even minor
-package updates must pass the full Python matrix. See the
-[NumPy 2.4.6](https://pypi.org/project/numpy/2.4.6/) and [2.5.4](https://pypi.org/project/numpy/2.5.4/)
-package metadata.
+ecosystem. Major pip upgrades need a separate compatibility review. Dependabot ignores NumPy `>=2.5`
+because that series needs Python 3.12 or later and this tutorial still supports 3.11. Revisit this limit
+when the tutorial's minimum Python version changes; even minor package updates must pass the full Python
+matrix. Dependabot can't read `.env` files, so it won't propose Elastic Stack updates; see
+[Upgrading and migration](docs/UPGRADING.md#maintaining-the-tutorial-baseline) for that.
 
 The images in this README are drawn from HTML sources in [docs/images/src/](docs/images/src/); the
 terminal output, the Kibana screen and the numbers in the diagrams come from a real run.
 
 For dependency updates, migrating from 8.x and keeping existing data, see
 [Upgrading and migration](docs/UPGRADING.md).
+
+## License
+
+Released under the [MIT License](LICENSE).

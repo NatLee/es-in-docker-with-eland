@@ -7,9 +7,10 @@
 
 <p align="center">
   <a href="https://github.com/NatLee/es-in-docker-with-eland/actions/workflows/ci.yml"><img src="https://github.com/NatLee/es-in-docker-with-eland/actions/workflows/ci.yml/badge.svg" alt="Tutorial checks"></a>
-  <img src="https://img.shields.io/badge/Elastic%20Stack-9.5.5-005571?logo=elasticsearch" alt="Elastic Stack 9.5.5">
-  <img src="https://img.shields.io/badge/Eland-9.2.0-00bfb3" alt="Eland 9.2.0">
+  <a href=".env.example"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FNatLee%2Fes-in-docker-with-eland%2Fmain%2F.env.example&search=STACK_VERSION%3D(%5CS%2B)&replace=%241&label=Elastic%20Stack&color=005571&logo=elasticsearch" alt="Elastic Stack 版本，讀自 .env.example 的 STACK_VERSION"></a>
+  <a href="requirements.txt"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FNatLee%2Fes-in-docker-with-eland%2Fmain%2Frequirements.txt&search=eland%3D%3D(%5CS%2B)&replace=%241&label=Eland&color=00bfb3" alt="Eland 版本，讀自 requirements.txt"></a>
   <img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776ab?logo=python&logoColor=white" alt="Python 3.11 | 3.12 | 3.13">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/NatLee/es-in-docker-with-eland" alt="授權：MIT"></a>
 </p>
 
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-TW.md">繁體中文</a></p>
@@ -27,8 +28,8 @@
 | Docker | Docker Engine 或 Docker Desktop，以及支援 `up --wait` 的 `docker compose` 外掛 |
 | 記憶體 | 至少分配 4 GB 給 Docker，並為 Jupyter 保留一些空間 |
 | Python | 3.11–3.13；CI 用 3.12 跑完整教學 |
-| Elasticsearch 與 Kibana | `9.5.5`，在 [.env.example](.env.example) 中統一固定版本 |
-| Eland | `9.2.0`；Python 套件版本都在 [requirements.txt](requirements.txt) |
+| Elasticsearch 與 Kibana | 9.x，兩者共用一個確切版本：[.env.example](.env.example) 的 `STACK_VERSION`（上方徽章會顯示） |
+| Eland 與 Python client | 版本固定在 [requirements.txt](requirements.txt) |
 
 Linux 請先檢查 `sysctl vm.max_map_count`。若低於 `1048576`，執行 `sudo sysctl -w vm.max_map_count=1048576`，並依發行版設定為永久生效。Docker Desktop／WSL 的設定對象是 Docker 使用的 Linux 虛擬機；請參考 Elastic 的[各平台設定方式](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-prod#set-vm-max-map-count)，不要在 macOS 主機上執行 Linux 核心設定指令。
 
@@ -84,7 +85,7 @@ Linux 請先檢查 `sysctl vm.max_map_count`。若低於 `1048576`，執行 `sud
    連線檢查只讀取資訊，叢集健康狀態是 red 時會失敗（單節點出現 yellow 是正常的）。Smoke test 會建立兩個教學索引，檢查 mapping、篩選、聚合和超過 10,000 筆的讀取，並保留資料讓你觀察。重跑會覆寫相同的文件 ID，不會重複新增。成功時看起來像這樣：
 
    <p align="center">
-     <img src="docs/images/quick-start-terminal.webp" alt="終端機畫面：docker compose up --wait 啟動四個容器；docker compose ps 顯示 Elasticsearch 和 Kibana 健康，兩個 setup 容器以代碼 0 結束；dev-cp-cert.sh 複製 ca.crt；check_connection.py 回報 Elasticsearch 9.5.5、憑證驗證成功、健康狀態 green；smoke_test.py 印出 PASS" width="860">
+     <img src="docs/images/quick-start-terminal.webp" alt="終端機畫面：docker compose up --wait 啟動四個容器；docker compose ps 顯示 Elasticsearch 和 Kibana 健康，兩個 setup 容器以代碼 0 結束；dev-cp-cert.sh 複製 ca.crt；check_connection.py 回報 Elasticsearch 版本、憑證驗證成功、健康狀態 green；smoke_test.py 印出 PASS" width="860">
    </p>
 
 6. **開啟 Notebook。**
@@ -165,7 +166,7 @@ Shell 中已匯出的環境變數優先於 `.env`，殘留的 `export` 可能讓
 
 ```bash
 # 查看啟動問題。
-docker compose logs --tail=100 backend-es-setup backend-elasticsearch backend-kibana-setup backend-kibana
+docker compose logs --tail=100
 
 # 暫停及恢復既有環境。
 docker compose stop
@@ -188,7 +189,7 @@ bash dev-es-bash.sh
 | 問題 | 檢查方式 |
 | --- | --- |
 | 啟動逾時／服務 unhealthy | 查看 `docker compose ps -a` 與日誌，確認 Docker 記憶體和 `vm.max_map_count`；首次下載映像檔可能較久。 |
-| `backend-es-setup` 日誌出現 `set: pipefail: invalid option name` | 腳本被以 Windows 換行（CRLF）取出。請先更新到最新版（已固定為 LF），再重新取出這三個腳本：`rm dev-cp-cert.sh dev-es-bash.sh docker/setup-certs.sh && git checkout -- dev-cp-cert.sh dev-es-bash.sh docker/setup-certs.sh`。只更新不會改寫已經取出的檔案。 |
+| `backend-es-setup` 日誌出現 `set: pipefail: invalid option name` | 腳本被以 Windows 換行（CRLF）取出。請先更新到最新版（已固定為 LF），再重新取出腳本：`git rm -q --cached -- '*.sh' && git checkout HEAD -- '*.sh'`。只更新不會改寫已經取出的檔案。 |
 | `401`／帳密驗證失敗 | 使用 `elastic` 與這個資料卷建立時的密碼，檢查 shell 覆寫值及所選設定檔；事後修改 `.env` 不會重設既有帳號。 |
 | 找不到 CA／憑證驗證失敗 | 對同一專案執行 `bash dev-cp-cert.sh`，確認 `ELASTIC_CA_CERT`，使用 `localhost` 或 `127.0.0.1`，並保持憑證驗證開啟。 |
 | Kibana 無法開啟 | 使用 `http://localhost:5601`（或你的 `KIBANA_PORT`），確認 Kibana setup 以代碼 0 結束。 |
@@ -200,11 +201,13 @@ bash dev-es-bash.sh
 
 ## 版本說明
 
-Elastic 版本於 2026-10-23 依[官方 Docker 文件](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-compose)確認。固定版本提供明確的起點，後續更新仍需檢查相容性並通過 CI。
+每個版本號都只寫在一個檔案，其他地方都從那裡讀：
 
-Eland 最新穩定版是 `9.2.0`（2026-10-23 確認，2025-10-30 發布）。本教學從 `8.15.0` 升到 `9.2.0`；新版加入 NumPy 2 與 Python 3.13 支援，並停止支援 Python 3.9。來源：[PyPI](https://pypi.org/project/eland/) 與[官方版本說明](https://github.com/elastic/eland/releases/tag/v9.2.0)。
+- **Elastic Stack**：[.env.example](.env.example) 的 `STACK_VERSION`。Compose 用它決定兩個映像檔的版本，CI 啟動的就是這個版本，最上方的徽章也是讀它。升級教學只要改這一行，CI 會用新版本把整套教學跑一遍。你自己的 `.env` 會保留建立時的版本，請見[升級與遷移指南](docs/UPGRADING.zh-TW.md)。
+- **Python 套件**：[requirements.txt](requirements.txt)，Dependabot 每週提出更新。
+- **支援的伺服器主版本**：由已安裝的 Elasticsearch Python client 決定，因為 client 只能連同一個主版本的伺服器。腳本和 Notebook 會自動檢查，不相符時會說明該改哪一邊。
 
-Eland 與 Elasticsearch 各自發布版本。這些 DataFrame 範例只需主版本相同，因此 Eland 9.2.0 可搭配 Elasticsearch 9.5.5；匯入 NLP／PyTorch 模型則要求次版本一致，不在本教學範圍。Eland 要求 Python `>=3.10,<3.14`，支援 pandas 1.5 與 2；本專案使用 Python 3.11–3.13 與 pandas 2。詳見 [Eland 相容性說明](https://github.com/elastic/eland/tree/v9.2.0#compatibility)。
+Eland 與 Elasticsearch 各自發布版本。這些 DataFrame 範例只需主版本相同；匯入 NLP／PyTorch 模型則要求次版本一致，不在本教學範圍。詳見 [Eland 相容性說明](https://github.com/elastic/eland#compatibility)與 Elastic 的 [Docker 文件](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-compose)。
 
 ## 驗證與維護
 
@@ -217,12 +220,16 @@ python -m unittest discover -s tests -v
 
 本機叢集健康時，再執行 `python scripts/smoke_test.py` 驗證整合，並以重新啟動的 kernel 執行兩份 Notebook。單元測試本身無法證明 Docker 能啟動或連線正常。
 
-2026-10-23 已在 ARM64 Docker 與 Python 3.12.9 實測：Elasticsearch／Kibana 9.5.5 啟動健康、21 個單元測試通過、兩份 Notebook 完整執行、20,000 筆匯出成功，且重建容器後資料仍保留；憑證初始化中斷後的恢復流程也已驗證。2026-11-03 又在 Windows 11、Docker Desktop 29.8.1（x86-64）與 Python 3.12 上，從全新 clone 走過一次快速開始：映像檔已在本機時 76 秒就全部健康，連線檢查與 smoke test 通過，兩份 Notebook 也都跑完。
+除了 CI，快速開始也實際從全新 clone 手動跑過：ARM64 Docker（2026-10-23，並確認重建容器後資料仍在、憑證初始化中斷後能恢復），以及 x86-64 的 Windows 11 加 Docker Desktop（2026-11-03，2026-11-04 升級 Elastic Stack 後又跑一次）。
 
-[GitHub Actions](.github/workflows/ci.yml) 會在 push 到 `main`、所有 pull request、手動執行及每月排程時檢查。Python 3.11／3.13 單元測試，以及「在 Windows 式取出時 shell 腳本仍是 LF 換行」的檢查都通過後，才以 Python 3.12 啟動 Docker、重跑兩次 smoke test 並執行兩份 Notebook。新提交會取消同一分支或 PR 過時的執行；Actions 固定於 commit SHA，整合測試失敗的診斷檔保留七天。
+[GitHub Actions](.github/workflows/ci.yml) 會在 push 到 `main`、所有 pull request、手動執行及每月排程時檢查。Python 3.11／3.13 單元測試、所有 shell 腳本的語法檢查，以及「在 Windows 式取出時 shell 腳本仍是 LF 換行」的檢查都通過後，才以 Python 3.12 啟動 Docker、重跑兩次 smoke test 並執行兩份 Notebook。新提交會取消同一分支或 PR 過時的執行；Actions 固定於 commit SHA，整合測試失敗的診斷檔保留七天。
 
-[Dependabot](.github/dependabot.yml) 每週檢查 pip 與 Actions 更新，並按套件來源分組；pip 套件主版本升級需另外檢查相容性。NumPy 固定為仍支援 Python 3.11 的 `2.4.6`，Dependabot 排除 `>=2.5`，因為該系列要求 Python 3.12 以上。調整教學的最低 Python 版本時，請一併檢視此限制；即使只是套件次版本更新，也必須通過完整 Python 測試矩陣。版本需求見 [NumPy 2.4.6](https://pypi.org/project/numpy/2.4.6/) 與 [2.5.4](https://pypi.org/project/numpy/2.5.4/) 的套件資訊。
+[Dependabot](.github/dependabot.yml) 每週檢查 pip 與 Actions 更新，並按套件來源分組；pip 套件主版本升級需另外檢查相容性。Dependabot 排除 NumPy `>=2.5`，因為該系列要求 Python 3.12 以上，而本教學仍支援 3.11。調整教學的最低 Python 版本時，請一併檢視此限制；即使只是套件次版本更新，也必須通過完整 Python 測試矩陣。Dependabot 讀不懂 `.env` 檔，不會提出 Elastic Stack 的更新，做法請見[升級與遷移指南](docs/UPGRADING.zh-TW.md#持續維護教學版本)。
 
 README 裡的圖片由 [docs/images/src/](docs/images/src/) 的 HTML 原始檔產生；終端機輸出、Kibana 畫面和圖中的數字都來自實際執行。
 
 後續套件更新、從 8.x 遷移與保留既有資料的方法，請閱讀[升級與遷移指南](docs/UPGRADING.zh-TW.md)。
+
+## 授權
+
+以 [MIT 授權](LICENSE)釋出。
